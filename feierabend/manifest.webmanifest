@@ -1,0 +1,12 @@
+{
+  "name": "Feierabend – Handwerker-Assistent",
+  "short_name": "Feierabend",
+  "description": "Baustelle ins Handy sprechen – Stundenzettel, Bautagebuch und Rechnung entstehen automatisch.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f5f4",
+  "theme_color": "#ea580c",
+  "lang": "de",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
