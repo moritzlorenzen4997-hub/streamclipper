@@ -1,0 +1,645 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kopf frei</title>
+<meta name="description" content="Alles aus dem Kopf rein – Kopf frei sortiert es in Termine, Aufgaben und Einkaufsliste.">
+<meta name="theme-color" content="#4f46e5">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<style>
+:root{
+  --bg:#f6f6fb; --card:#ffffff; --ink:#16162a; --muted:#6b6b85; --line:#e6e6f0;
+  --accent:#4f46e5; --accent-soft:#eef0ff; --ok:#16a34a; --warn:#d97706; --bad:#dc2626;
+  --event:#0ea5e9; --shop:#16a34a; --note:#a855f7; --task:#4f46e5;
+  --radius:16px; --shadow:0 1px 2px rgba(20,20,40,.06),0 4px 16px rgba(20,20,40,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f0f17; --card:#1a1a26; --ink:#ececf5; --muted:#9a9ab5; --line:#2a2a3a;
+    --accent:#818cf8; --accent-soft:#25264a; --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f0f17; --card:#1a1a26; --ink:#ececf5; --muted:#9a9ab5; --line:#2a2a3a;
+  --accent:#818cf8; --accent-soft:#25264a; --shadow:none;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
+main{max-width:640px;margin:0 auto;padding:16px 16px 110px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 0 14px}
+h1{font-size:1.45rem;margin:0;letter-spacing:-.01em}
+h2{font-size:1rem;margin:22px 0 8px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.sub{color:var(--muted);font-size:.92rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px}
+button{font:inherit;cursor:pointer;border:0;border-radius:12px;padding:10px 14px;background:var(--accent-soft);color:var(--accent);font-weight:600}
+button.primary{background:var(--accent);color:#fff}
+button.ghost{background:transparent;color:var(--muted);padding:6px 8px}
+button:disabled{opacity:.5;cursor:default}
+.iconbtn{width:42px;height:42px;padding:0;display:grid;place-items:center;font-size:1.2rem}
+textarea,input,select{font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 12px;width:100%}
+textarea{min-height:92px;resize:vertical}
+textarea:focus,input:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.row{display:flex;gap:8px;align-items:center}
+.grow{flex:1}
+.dump-actions{display:flex;gap:8px;margin-top:10px;align-items:center}
+.hint{font-size:.82rem;color:var(--muted);margin-top:8px}
+.list{list-style:none;margin:0;padding:0}
+.item{display:flex;gap:10px;align-items:flex-start;padding:10px 4px;border-bottom:1px solid var(--line)}
+.item:last-child{border-bottom:0}
+.item .chk{appearance:none;width:22px;height:22px;min-width:22px;border:2px solid var(--line);border-radius:7px;margin-top:1px;padding:0;background:transparent;cursor:pointer}
+.item .chk:checked{background:var(--ok);border-color:var(--ok)}
+.item .chk:checked::after{content:"✓";color:#fff;display:block;text-align:center;font-size:14px;line-height:18px;font-weight:700}
+.item.done .title{text-decoration:line-through;color:var(--muted)}
+.title{cursor:text;word-break:break-word}
+.meta{font-size:.8rem;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
+.badge{display:inline-block;font-size:.72rem;font-weight:700;padding:2px 7px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
+.badge.event{background:color-mix(in srgb,var(--event) 15%,transparent);color:var(--event)}
+.badge.prio{background:color-mix(in srgb,var(--bad) 14%,transparent);color:var(--bad)}
+.badge.late{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
+.time{font-variant-numeric:tabular-nums;font-weight:700;color:var(--event);min-width:46px}
+.acts{margin-left:auto;display:flex;gap:2px;opacity:.75}
+.empty{color:var(--muted);font-size:.92rem;padding:6px 4px}
+.progress{height:8px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:10px}
+.progress>div{height:100%;background:var(--ok);width:0;transition:width .4s}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.stat{background:var(--bg);border-radius:12px;padding:10px;text-align:center}
+.stat b{display:block;font-size:1.35rem}
+.stat span{font-size:.78rem;color:var(--muted)}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom)}
+nav .in{display:flex;max-width:640px;width:100%}
+nav button{flex:1;background:transparent;color:var(--muted);border-radius:0;padding:10px 4px 12px;font-size:.75rem;display:flex;flex-direction:column;align-items:center;gap:2px}
+nav button .ic{font-size:1.3rem}
+nav button.on{color:var(--accent)}
+.toast{position:fixed;left:50%;bottom:88px;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:12px;font-size:.9rem;transition:.25s;display:flex;gap:12px;align-items:center;max-width:calc(100% - 32px);z-index:20}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast button{background:transparent;color:var(--accent);padding:0}
+.view{display:none}.view.on{display:block}
+.group-title{font-weight:700;font-size:.9rem;margin:14px 0 2px}
+.pro{border:2px solid var(--accent)}
+.price{font-size:1.6rem;font-weight:800}
+.feat{margin:8px 0 0;padding-left:20px}
+.feat li{margin:3px 0}
+.mic.rec{background:var(--bad);color:#fff;animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.6}}
+.top3 .item .title{font-weight:600}
+.chiprow{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.chip{font-size:.8rem;padding:6px 10px;border-radius:999px;background:var(--bg);border:1px solid var(--line);color:var(--ink);font-weight:500}
+label{display:block;font-size:.88rem;color:var(--muted);margin:12px 0 4px}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1 id="greet">Hallo!</h1>
+      <div class="sub" id="today"></div>
+    </div>
+    <button class="iconbtn" id="settingsBtn" aria-label="Einstellungen" title="Einstellungen">⚙️</button>
+  </header>
+
+  <!-- Brain-Dump: always visible -->
+  <section class="card" aria-label="Alles aus dem Kopf">
+    <textarea id="dump" placeholder="Einfach alles rein, was dir im Kopf rumschwirrt …&#10;z. B.: Morgen 15 Uhr Zahnarzt. Milch, Eier und Brot kaufen. Mama anrufen, wichtig! Idee: Fahrradtour im Frühling"></textarea>
+    <div class="dump-actions">
+      <button class="iconbtn mic" id="micBtn" title="Sprechen" aria-label="Sprechen">🎙️</button>
+      <span class="sub grow" id="modeInfo"></span>
+      <button class="primary" id="sortBtn">Sortieren ✨</button>
+    </div>
+  </section>
+
+  <!-- HEUTE -->
+  <section class="view on" id="v-heute">
+    <div class="card" style="margin-top:14px">
+      <div class="row"><b class="grow" id="dayHead">Dein Tag</b><span class="sub" id="dayCount"></span></div>
+      <div class="progress"><div id="dayBar"></div></div>
+    </div>
+    <h2>📅 Termine heute</h2>
+    <div class="card"><ul class="list" id="todayEvents"></ul></div>
+    <h2>🎯 Deine Top 3</h2>
+    <div class="card top3"><ul class="list" id="top3"></ul></div>
+    <h2>📝 Auch noch</h2>
+    <div class="card"><ul class="list" id="rest"></ul></div>
+  </section>
+
+  <!-- EINKAUF -->
+  <section class="view" id="v-einkauf">
+    <h2>🛒 Einkaufsliste</h2>
+    <div class="card">
+      <form class="row" id="shopAdd"><input id="shopInput" placeholder="Artikel hinzufügen …" autocomplete="off"><button>+</button></form>
+      <div id="shopList"></div>
+      <div class="chiprow">
+        <button class="chip" id="shareShop">📤 Teilen</button>
+        <button class="chip" id="clearShop">🧹 Erledigte entfernen</button>
+        <button class="chip" id="orderShop">🚚 Online bestellen</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- PLAN -->
+  <section class="view" id="v-plan">
+    <h2>🗓️ Nächste 14 Tage</h2>
+    <div id="planDays"></div>
+    <h2>📌 Ohne Datum</h2>
+    <div class="card"><ul class="list" id="undated"></ul></div>
+    <h2>💡 Ideen &amp; Notizen</h2>
+    <div class="card"><ul class="list" id="notes"></ul></div>
+  </section>
+
+  <!-- RÜCKBLICK -->
+  <section class="view" id="v-abend">
+    <h2>🌙 Tagesabschluss</h2>
+    <div class="card">
+      <div id="reviewText"></div>
+      <div class="stats">
+        <div class="stat"><b id="sDone">0</b><span>heute erledigt</span></div>
+        <div class="stat"><b id="sStreak">0</b><span>Tage-Serie 🔥</span></div>
+        <div class="stat"><b id="sWeek">0</b><span>diese Woche</span></div>
+      </div>
+    </div>
+    <h2>Offen geblieben</h2>
+    <div class="card">
+      <ul class="list" id="openToday"></ul>
+      <div class="chiprow"><button class="chip" id="allTomorrow">➡️ Alles auf morgen</button></div>
+    </div>
+    <h2>Heute geschafft</h2>
+    <div class="card"><ul class="list" id="doneToday"></ul></div>
+  </section>
+
+  <!-- EINSTELLUNGEN -->
+  <section class="view" id="v-settings">
+    <h2>✨ KI-Modus</h2>
+    <div class="card">
+      <div class="sub">Ohne Schlüssel sortiert Kopf frei lokal auf deinem Gerät (schnell, privat, gut für klare Sätze). Mit einem Claude-API-Schlüssel versteht die App auch freie, chaotische Sprache.</div>
+      <label for="apiKey">Anthropic API-Schlüssel (bleibt nur auf diesem Gerät)</label>
+      <input id="apiKey" type="password" placeholder="sk-ant-…" autocomplete="off">
+      <label for="model">Modell</label>
+      <input id="model" placeholder="claude-opus-5-5">
+      <div class="chiprow"><button class="chip" id="saveKey">Speichern</button><button class="chip" id="removeKey">Schlüssel löschen</button></div>
+    </div>
+    <h2>💎 Kopf frei Pro</h2>
+    <div class="card pro">
+      <div class="row"><span class="price">3,99 €</span><span class="sub">/ Monat · oder 29,99 € / Jahr</span></div>
+      <ul class="feat">
+        <li>Unbegrenzt KI-Sortierung – ohne eigenen Schlüssel</li>
+        <li>Erinnerungen per Push &amp; Sync mit Google/Apple-Kalender</li>
+        <li>Geteilte Einkaufsliste mit Partner/WG/Familie</li>
+        <li>Morgen-Briefing &amp; Wochenrückblick vorgelesen</li>
+        <li>Sync zwischen Handy und Laptop</li>
+      </ul>
+      <div class="hint">Familien-Abo: 5,99 € / Monat für bis zu 5 Personen. (Vorschau – Bezahlung ist in diesem Prototyp noch nicht eingebaut.)</div>
+    </div>
+    <h2>Daten</h2>
+    <div class="card chiprow" style="margin-top:0">
+      <button class="chip" id="exportBtn">⬇️ Exportieren</button>
+      <button class="chip" id="importBtn">⬆️ Importieren</button>
+      <button class="chip" id="demoBtn">🧪 Beispiel laden</button>
+      <button class="chip" id="wipeBtn" style="color:var(--bad)">🗑️ Alles löschen</button>
+      <input type="file" id="importFile" accept="application/json" hidden>
+    </div>
+  </section>
+</main>
+
+<nav><div class="in">
+  <button data-v="heute" class="on"><span class="ic">☀️</span>Heute</button>
+  <button data-v="einkauf"><span class="ic">🛒</span>Einkauf</button>
+  <button data-v="plan"><span class="ic">🗓️</span>Plan</button>
+  <button data-v="abend"><span class="ic">🌙</span>Rückblick</button>
+</div></nav>
+
+<div class="toast" id="toast"><span id="toastMsg"></span><button id="toastUndo">Rückgängig</button></div>
+
+<script type="module">
+/* ============================================================
+   Kopf frei – Brain-Dump → Termine, Aufgaben, Einkauf, Ideen
+   Daten bleiben lokal (localStorage). Optional: Claude-API.
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const KEY = 'kopffrei.v1';
+const DEFAULT_MODEL = 'claude-opus-5-5';
+
+/* ---------- Storage ---------- */
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch{ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch{} },
+  del(k){ try{ localStorage.removeItem(k); }catch{} }
+};
+let state = store.get(KEY, { items: [], doneLog: {} });
+// doneLog: { 'YYYY-MM-DD': count } → für Serie & Wochenstatistik
+const save = () => store.set(KEY, state);
+
+/* ---------- Datum ---------- */
+const pad = n => String(n).padStart(2, '0');
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+const todayISO = () => iso(new Date());
+const WD = ['sonntag','montag','dienstag','mittwoch','donnerstag','freitag','samstag'];
+const WD_SHORT = ['So','Mo','Di','Mi','Do','Fr','Sa'];
+const MONTHS = ['januar','februar','märz','april','mai','juni','juli','august','september','oktober','november','dezember'];
+function fmtDay(isoStr){
+  const t = todayISO();
+  if (isoStr === t) return 'Heute';
+  if (isoStr === iso(addDays(new Date(),1))) return 'Morgen';
+  if (isoStr === iso(addDays(new Date(),-1))) return 'Gestern';
+  const d = new Date(isoStr+'T12:00');
+  return `${WD_SHORT[d.getDay()]}, ${d.getDate()}.${d.getMonth()+1}.`;
+}
+
+/* ---------- Lokaler Parser (ohne KI) ---------- */
+const GROCERY = {
+  'Obst & Gemüse': 'apfel äpfel banane bananen birne birnen orange orangen zitrone zitronen tomate tomaten gurke gurken salat paprika zwiebel zwiebeln knoblauch kartoffel kartoffeln karotte karotten möhren brokkoli zucchini avocado beeren erdbeeren trauben spinat pilze champignons obst gemüse ingwer lauch kräuter petersilie basilikum',
+  'Kühlregal': 'milch hafermilch joghurt quark käse butter sahne eier ei schmand frischkäse mozzarella feta wurst schinken salami tofu margarine',
+  'Brot & Backwaren': 'brot brötchen toast baguette brezel croissant knäckebrot',
+  'Fleisch & Fisch': 'hähnchen hackfleisch fleisch fisch lachs steak würstchen thunfisch',
+  'Vorrat': 'nudeln pasta reis mehl zucker salz pfeffer öl olivenöl essig müsli haferflocken kaffee tee honig marmelade nutella linsen bohnen tomatensoße passata ketchup senf mayo gewürze brühe',
+  'Getränke': 'wasser saft cola bier wein sprudel limo apfelschorle',
+  'Snacks': 'schokolade chips kekse nüsse gummibärchen eis',
+  'Drogerie & Haushalt': 'klopapier toilettenpapier zahnpasta shampoo duschgel seife spülmittel waschmittel müllbeutel küchenrolle taschentücher deo windeln batterien'
+};
+const GROCERY_MAP = {};
+for (const [cat, words] of Object.entries(GROCERY)) for (const w of words.split(' ')) GROCERY_MAP[w] = cat;
+function shopCategory(name){
+  const words = name.toLowerCase().split(/[\s-]+/);
+  for (const w of words.reverse()) {
+    if (GROCERY_MAP[w]) return GROCERY_MAP[w];
+    for (const k in GROCERY_MAP) if (w.length > 3 && (w.endsWith(k) || k.endsWith(w))) return GROCERY_MAP[k];
+  }
+  return 'Sonstiges';
+}
+const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+const tidy = s => s.replace(/\s{2,}/g,' ').replace(/^[\s,;:–-]+|[\s,;:–-]+$/g,'').trim();
+
+function parseDate(text, now = new Date()){
+  let t = ' ' + text + ' ', date = null, time = null;
+  const take = (re, fn) => { const m = t.match(re); if (m) { const r = fn(m); if (r !== false) { t = t.replace(m[0], ' '); return true; } } return false; };
+
+  // Uhrzeit: "um 15 Uhr", "15:30", "15.30 Uhr", "um 9"
+  take(/\b(?:um|ab|gegen)?\s*(\d{1,2})(?::(\d{2})\s*(?:uhr)?|\.(\d{2})\s*uhr)\b/i, m => { const h=+m[1], mi=+(m[2] ?? m[3]); if (h>23||mi>59) return false; time = `${pad(h)}:${pad(mi)}`; })
+   || take(/\b(?:um|ab|gegen)?\s*(\d{1,2})\s*uhr\b/i, m => { if (+m[1]>23) return false; time = `${pad(+m[1])}:00`; })
+   || take(/\bum\s+(\d{1,2})\b(?![.\d])/i, m => { if (+m[1]>23) return false; time = `${pad(+m[1])}:00`; });
+  if (!time) {
+    take(/\b(früh|morgens)\b/i, () => { time = '08:00'; })
+     || take(/\b(mittags|zum mittag)\b/i, () => { time = '12:00'; })
+     || take(/\b(heute abend|abends)\b/i, m => { time = '19:00'; if (/heute/i.test(m[1])) date = iso(now); });
+  }
+  // Datum
+  take(/(?<!\p{L})übermorgen(?!\p{L})/iu, () => { date = iso(addDays(now,2)); })
+   || take(/\bmorgen\b/i, () => { date = iso(addDays(now,1)); })
+   || take(/\bheute\b/i, () => { date = iso(now); })
+   || take(/\bin\s+(\d+|einem|einer|zwei|drei)\s+(tag|tagen|woche|wochen)\b/i, m => {
+        const nmap = {einem:1,einer:1,zwei:2,drei:3}; const n = nmap[m[1].toLowerCase()] ?? +m[1];
+        date = iso(addDays(now, /woche/i.test(m[2]) ? n*7 : n)); })
+   || take(/\bnächste\s+woche\b/i, () => { const d = addDays(now, ((8 - now.getDay()) % 7) || 7); date = iso(d); })
+   || take(/\b(?:am\s+)?(\d{1,2})\.(\d{1,2})\.(\d{2,4})?/i, m => {
+        let y = m[3] ? +m[3] : now.getFullYear(); if (y < 100) y += 2000;
+        const d = new Date(y, +m[2]-1, +m[1]); if (isNaN(d)) return false;
+        if (!m[3] && d < addDays(now,-1)) d.setFullYear(y+1);
+        date = iso(d); })
+   || take(new RegExp(`\\b(?:am\\s+)?(\\d{1,2})\\.?\\s+(${MONTHS.join('|')})\\b`, 'i'), m => {
+        const d = new Date(now.getFullYear(), MONTHS.indexOf(m[2].toLowerCase()), +m[1]);
+        if (d < addDays(now,-1)) d.setFullYear(d.getFullYear()+1); date = iso(d); })
+   || take(new RegExp(`\\b(?:(?:am|diesen|kommenden|nächsten)\\s+)?(${WD.join('|')})s?\\b`, 'i'), m => {
+        const target = WD.indexOf(m[1].toLowerCase()); let diff = (target - now.getDay() + 7) % 7;
+        if (diff === 0 || /nächsten/i.test(m[0])) diff = diff || 7; date = iso(addDays(now, diff)); });
+  if (time && !date) date = iso(now);
+  return { rest: t, date, time };
+}
+
+function localParse(input){
+  const out = [];
+  const clauses = input.split(/\n+|(?<=[^\d\s][.!?;])\s+/).map(s => s.trim()).filter(Boolean);
+  for (let raw of clauses) {
+    raw = raw.replace(/[.!?;]+$/,'').trim(); if (!raw) continue;
+    const low = raw.toLowerCase();
+
+    // Idee / Notiz
+    let m = raw.match(/^(idee|notiz|merken|nicht vergessen|gedanke)\s*[:\-–]?\s*(.+)$/i);
+    if (m && /^(idee|notiz|gedanke)/i.test(m[1])) { out.push({ type:'note', title: cap(tidy(m[2])) }); continue; }
+
+    // Einkauf
+    const shopTrigger = /\b(kaufen|besorgen|einkaufen|holen|mitbringen|nachkaufen)\b|^(einkauf|einkaufsliste|einkaufen)\s*:/i;
+    const words = low.replace(/[,]/g,' ').split(/\s+/).filter(w => w && !['und','noch','ein','eine','etwas','paar','bisschen'].includes(w));
+    const allGrocery = words.length > 0 && words.every(w => GROCERY_MAP[w] || /^\d/.test(w));
+    const hasDate = !!parseDate(raw).date;
+    if ((shopTrigger.test(raw) && !hasDate) || allGrocery) {
+      const body = raw.replace(/^(einkauf|einkaufsliste|einkaufen)\s*:\s*/i,'')
+        .replace(/\b(noch|bitte|unbedingt|im supermarkt|beim bäcker|vom markt|morgen|heute)\b/gi,' ')
+        .replace(/\b(kaufen|besorgen|einkaufen|holen|mitbringen|nachkaufen)\b/gi,' ');
+      const parts = (allGrocery ? body.split(/[\s,]+|\bund\b/i) : body.split(/,|\bund\b|\bsowie\b|\+|&/i))
+        .map(tidy).filter(p => p && !/^(und|noch|ein|eine|etwas|paar|bisschen)$/i.test(p));
+      if (parts.length && parts.every(p => p.split(/\s+/).length <= 4)) { for (const p of parts) out.push({ type:'shopping', title: cap(p), category: shopCategory(p) }); continue; }
+    }
+
+    // Termin / Aufgabe
+    let prio = 'normal';
+    let text = raw.replace(/\b(dringend|wichtig|unbedingt|asap|sofort)\b\s*!*/gi, () => { prio = 'high'; return ' '; });
+    if (/!{1,}$/.test(raw)) prio = 'high';
+    if (m && !/^(idee|notiz|gedanke)/i.test(m[1])) text = m[2];
+    const { rest, date, time } = parseDate(text);
+    const title = cap(tidy(rest.replace(/\b(am|um|bis)\s*$/i,'')));
+    if (!title) continue;
+    out.push({ type: time ? 'event' : 'task', title, date, time, priority: prio });
+  }
+  return out;
+}
+
+/* ---------- KI-Parser (Claude) ---------- */
+const SCHEMA = {
+  type: 'object',
+  properties: {
+    items: { type: 'array', items: {
+      type: 'object',
+      properties: {
+        type: { type: 'string', enum: ['task','event','shopping','note'] },
+        title: { type: 'string' },
+        date: { type: ['string','null'], description: 'YYYY-MM-DD oder null' },
+        time: { type: ['string','null'], description: 'HH:MM (24h) oder null' },
+        priority: { type: 'string', enum: ['high','normal'] },
+        category: { type: ['string','null'], description: 'Nur bei shopping: Supermarkt-Abteilung' }
+      },
+      required: ['type','title','date','time','priority','category'],
+      additionalProperties: false
+    } }
+  },
+  required: ['items'],
+  additionalProperties: false
+};
+const SYSTEM = `Du bist der Sortier-Assistent der App "Kopf frei". Der Nutzer schreibt oder spricht ungeordnet alles auf, was ihm im Kopf herumgeht. Zerlege den Text in einzelne, kurze, handlungsorientierte Einträge auf Deutsch:
+- "event": Termin mit Uhrzeit (z. B. Arzt, Meeting, Treffen).
+- "task": Aufgabe/To-do, optional mit Fälligkeitsdatum.
+- "shopping": genau EIN Artikel pro Eintrag (z. B. "Milch"), mit category aus: Obst & Gemüse, Kühlregal, Brot & Backwaren, Fleisch & Fisch, Vorrat, Getränke, Snacks, Drogerie & Haushalt, Sonstiges.
+- "note": Idee, Gedanke oder etwas zum Merken ohne konkrete Handlung.
+Löse relative Angaben ("morgen", "Freitag", "nächste Woche") anhand des heutigen Datums auf. priority "high" nur bei klaren Hinweisen (dringend, wichtig, Frist bald). Titel ohne Datums-/Zeitangaben, knapp, Großschreibung am Anfang. Erfinde nichts dazu.`;
+
+let Anthropic = null;
+async function aiParse(input, apiKey, model){
+  if (!Anthropic) Anthropic = (await import('https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@1.7.0/+esm')).default;
+  const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
+  const now = new Date();
+  const response = await client.beta.messages.create({
+    model,
+    max_tokens: 4000,
+    betas: ['server-side-fallback-2026-07-01'],
+    fallbacks: 'default',
+    system: SYSTEM,
+    output_config: { effort: 'low', format: { type: 'json_schema', schema: SCHEMA } },
+    messages: [{ role: 'user', content: `Heute ist ${WD[now.getDay()]}, der ${iso(now)}, ${pad(now.getHours())}:${pad(now.getMinutes())} Uhr.\n\nText:\n${input}` }]
+  });
+  if (response.stop_reason === 'refusal') throw new Error('Anfrage wurde abgelehnt');
+  const text = response.content.filter(b => b.type === 'text').map(b => b.text).join('');
+  return JSON.parse(text).items;
+}
+
+/* ---------- Items ---------- */
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+function addItems(list){
+  const created = list.map(x => ({
+    id: uid(), type: x.type, title: x.title, date: x.date || null, time: x.time || null,
+    priority: x.priority || 'normal', category: x.type === 'shopping' ? (x.category || shopCategory(x.title)) : null,
+    done: false, doneAt: null, createdAt: Date.now()
+  }));
+  state.items.push(...created); save(); render();
+  return created;
+}
+function toggle(id){
+  const it = state.items.find(i => i.id === id); if (!it) return;
+  it.done = !it.done;
+  const d = todayISO();
+  if (it.done) { it.doneAt = d; state.doneLog[d] = (state.doneLog[d] || 0) + 1; }
+  else { if (it.doneAt && state.doneLog[it.doneAt]) state.doneLog[it.doneAt]--; it.doneAt = null; }
+  save(); render();
+}
+function remove(id){
+  const idx = state.items.findIndex(i => i.id === id); if (idx < 0) return;
+  const [it] = state.items.splice(idx, 1); save(); render();
+  toast(`„${it.title}“ gelöscht`, () => { state.items.splice(idx, 0, it); save(); render(); });
+}
+function toTomorrow(id){
+  const it = state.items.find(i => i.id === id); if (!it) return;
+  it.date = iso(addDays(new Date(), 1)); save(); render();
+}
+function rename(id, title){
+  const it = state.items.find(i => i.id === id); if (!it || !title.trim()) return;
+  it.title = title.trim(); save();
+}
+
+/* ---------- Rendering ---------- */
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function itemHTML(it, { showDate = true, showTime = false, tomorrow = true } = {}){
+  const t = todayISO();
+  const late = !it.done && it.date && it.date < t && it.type !== 'note';
+  const meta = [];
+  if (it.type === 'event' && !showTime) meta.push(`<span class="badge event">${it.time || ''} Uhr</span>`);
+  if (it.priority === 'high' && !it.done) meta.push('<span class="badge prio">wichtig</span>');
+  if (late) meta.push(`<span class="badge late">überfällig · ${fmtDay(it.date)}</span>`);
+  else if (showDate && it.date) meta.push(`<span>${fmtDay(it.date)}</span>`);
+  return `<li class="item ${it.done ? 'done' : ''}" data-id="${it.id}">
+    ${showTime ? `<span class="time">${it.time || ''}</span>` : ''}
+    ${it.type !== 'note' ? `<input type="checkbox" class="chk" ${it.done ? 'checked' : ''} aria-label="erledigt">` : '<span>💡</span>'}
+    <div class="grow"><div class="title" contenteditable="true" spellcheck="false">${esc(it.title)}</div>${meta.length ? `<div class="meta">${meta.join('')}</div>` : ''}</div>
+    <span class="acts">
+      ${tomorrow && !it.done && it.type !== 'shopping' && it.type !== 'note' ? '<button class="ghost" data-a="tmr" title="Auf morgen">➡️</button>' : ''}
+      <button class="ghost" data-a="del" title="Löschen">✕</button>
+    </span></li>`;
+}
+const listOr = (arr, empty, opts) => arr.length ? arr.map(i => itemHTML(i, opts)).join('') : `<li class="empty">${empty}</li>`;
+const byTime = (a, b) => (a.time || '99').localeCompare(b.time || '99');
+const prioScore = it => (it.priority === 'high' ? 0 : 2) + (it.date && it.date < todayISO() ? -1 : 0) + (it.date ? 0 : 1);
+
+function render(){
+  const now = new Date(), t = todayISO(), h = now.getHours();
+  $('#greet').textContent = h < 11 ? 'Guten Morgen ☀️' : h < 17 ? 'Hallo 👋' : h < 22 ? 'Guten Abend 🌆' : 'Gute Nacht 🌙';
+  $('#today').textContent = now.toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long' });
+  const hasKey = !!store.get('kopffrei.key', '');
+  $('#modeInfo').textContent = hasKey ? '✨ KI-Modus aktiv' : '🔒 Lokal sortieren';
+
+  const items = state.items;
+  const tasks = items.filter(i => i.type === 'task' || i.type === 'event');
+
+  // HEUTE
+  const evToday = tasks.filter(i => i.type === 'event' && i.date === t).sort(byTime);
+  const dueToday = tasks.filter(i => i.type === 'task' && !i.done && (i.date === t || (i.date && i.date < t) || !i.date))
+                        .sort((a, b) => prioScore(a) - prioScore(b) || a.createdAt - b.createdAt);
+  const doneTodayTasks = tasks.filter(i => i.type === 'task' && i.done && i.doneAt === t);
+  const top3 = dueToday.slice(0, 3), rest = dueToday.slice(3);
+  $('#todayEvents').innerHTML = listOr(evToday, 'Keine Termine – freier Tag! 🎉', { showTime: true, showDate: false });
+  $('#top3').innerHTML = listOr([...top3, ...doneTodayTasks.slice(0, Math.max(0, 3 - top3.length))], 'Nichts offen. Schreib oben rein, was ansteht.', {});
+  $('#rest').innerHTML = listOr(rest, 'Sonst nichts – stark.', {});
+  const relevant = [...evToday, ...dueToday.filter(i => i.date === t || !i.date || i.date < t), ...doneTodayTasks];
+  const doneN = relevant.filter(i => i.done).length;
+  $('#dayCount').textContent = relevant.length ? `${doneN} / ${relevant.length} erledigt` : '';
+  $('#dayBar').style.width = relevant.length ? (doneN / relevant.length * 100) + '%' : '0%';
+  $('#dayHead').textContent = evToday.filter(e => !e.done && (e.time || '') >= `${pad(h)}:${pad(now.getMinutes())}`)[0]
+    ? `Als Nächstes: ${evToday.filter(e => !e.done && (e.time || '') >= `${pad(h)}:${pad(now.getMinutes())}`)[0].title}`
+    : 'Dein Tag';
+
+  // EINKAUF
+  const shop = items.filter(i => i.type === 'shopping');
+  const groups = {};
+  for (const s of shop) (groups[s.category || 'Sonstiges'] ||= []).push(s);
+  const order = [...Object.keys(GROCERY), 'Sonstiges'];
+  $('#shopList').innerHTML = shop.length
+    ? order.filter(g => groups[g]).map(g => `<div class="group-title">${g}</div><ul class="list">${groups[g].sort((a,b)=>a.done-b.done).map(i => itemHTML(i, { showDate:false })).join('')}</ul>`).join('')
+    : '<p class="empty">Liste ist leer. Tipp: oben einfach „Milch, Eier und Nudeln kaufen“ eintippen.</p>';
+  const openShop = shop.filter(s => !s.done).length;
+  document.querySelector('nav [data-v="einkauf"]').innerHTML = `<span class="ic">🛒</span>Einkauf${openShop ? ` (${openShop})` : ''}`;
+
+  // PLAN
+  let planHTML = '';
+  for (let d = 0; d < 14; d++) {
+    const day = iso(addDays(now, d));
+    const its = tasks.filter(i => i.date === day).sort(byTime);
+    if (!its.length) continue;
+    planHTML += `<div class="group-title">${fmtDay(day)}</div><div class="card"><ul class="list">${its.map(i => itemHTML(i, { showDate:false })).join('')}</ul></div>`;
+  }
+  const later = tasks.filter(i => i.date && i.date > iso(addDays(now, 13)) && !i.done).sort((a,b) => a.date.localeCompare(b.date));
+  if (later.length) planHTML += `<div class="group-title">Später</div><div class="card"><ul class="list">${later.map(i => itemHTML(i)).join('')}</ul></div>`;
+  $('#planDays').innerHTML = planHTML || '<div class="card empty">Noch nichts geplant.</div>';
+  $('#undated').innerHTML = listOr(tasks.filter(i => !i.date && !i.done), 'Alles hat ein Datum. 👍', {});
+  $('#notes').innerHTML = listOr(items.filter(i => i.type === 'note'), 'Noch keine Ideen. Schreib „Idee: …“', {});
+
+  // RÜCKBLICK
+  const openT = tasks.filter(i => !i.done && i.date && i.date <= t);
+  const doneT = items.filter(i => i.done && i.doneAt === t);
+  $('#openToday').innerHTML = listOr(openT, 'Nichts offen – Feierabend verdient! 🎉', {});
+  $('#doneToday').innerHTML = listOr(doneT, 'Noch nichts abgehakt.', { tomorrow:false });
+  let streak = 0;
+  for (let d = (state.doneLog[t] ? 0 : 1); ; d++) { if (state.doneLog[iso(addDays(now, -d))] > 0) streak++; else break; }
+  let week = 0; for (let d = 0; d < 7; d++) week += state.doneLog[iso(addDays(now, -d))] || 0;
+  $('#sDone').textContent = state.doneLog[t] || 0; $('#sStreak').textContent = streak; $('#sWeek').textContent = week;
+  $('#reviewText').innerHTML = (state.doneLog[t] || 0) >= 3
+    ? '<b>Starker Tag!</b> <span class="sub">Schieb den Rest auf morgen und mach den Kopf zu.</span>'
+    : '<b>Kurzer Check vor dem Schlafen:</b> <span class="sub">Was bleibt offen? Ein Tipp auf ➡️ – und es ist morgen wieder da, nicht in deinem Kopf.</span>';
+}
+
+/* ---------- Events ---------- */
+document.addEventListener('click', e => {
+  const li = e.target.closest('.item'); if (!li) return;
+  const id = li.dataset.id;
+  if (e.target.matches('.chk')) toggle(id);
+  else if (e.target.dataset.a === 'del') remove(id);
+  else if (e.target.dataset.a === 'tmr') { toTomorrow(id); toast('Auf morgen verschoben'); }
+});
+document.addEventListener('focusout', e => {
+  if (e.target.matches('.title')) rename(e.target.closest('.item').dataset.id, e.target.textContent);
+});
+document.addEventListener('keydown', e => {
+  if (e.target.matches('.title') && e.key === 'Enter') { e.preventDefault(); e.target.blur(); }
+  if (e.target.id === 'dump' && e.key === 'Enter' && (e.metaKey || e.ctrlKey)) sortDump();
+});
+
+function showView(v){
+  document.querySelectorAll('.view').forEach(s => s.classList.toggle('on', s.id === 'v-' + v));
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  window.scrollTo({ top: 0 });
+}
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => showView(b.dataset.v));
+$('#settingsBtn').onclick = () => {
+  $('#apiKey').value = store.get('kopffrei.key', '');
+  $('#model').value = store.get('kopffrei.model', '') || '';
+  showView('settings');
+};
+
+let toastTimer;
+function toast(msg, undo){
+  $('#toastMsg').textContent = msg;
+  $('#toastUndo').style.display = undo ? '' : 'none';
+  $('#toastUndo').onclick = () => { undo && undo(); $('#toast').classList.remove('show'); };
+  $('#toast').classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => $('#toast').classList.remove('show'), 4500);
+}
+
+async function sortDump(){
+  const text = $('#dump').value.trim(); if (!text) return;
+  const btn = $('#sortBtn'); btn.disabled = true; btn.textContent = 'Sortiere …';
+  const key = store.get('kopffrei.key', '');
+  let parsed, viaAI = false;
+  try {
+    if (key) { parsed = await aiParse(text, key, store.get('kopffrei.model', '') || DEFAULT_MODEL); viaAI = true; }
+  } catch (err) {
+    console.warn(err); toast('KI nicht erreichbar – lokal sortiert');
+  }
+  if (!parsed) parsed = localParse(text);
+  btn.disabled = false; btn.textContent = 'Sortieren ✨';
+  if (!parsed.length) { toast('Nichts erkannt – versuch es mit ganzen Sätzen.'); return; }
+  const created = addItems(parsed);
+  $('#dump').value = '';
+  const c = t => created.filter(i => i.type === t).length;
+  const parts = [c('event') && `${c('event')} Termin${c('event')>1?'e':''}`, c('task') && `${c('task')} Aufgabe${c('task')>1?'n':''}`,
+                 c('shopping') && `${c('shopping')}× Einkauf`, c('note') && `${c('note')} Idee${c('note')>1?'n':''}`].filter(Boolean);
+  toast(`${viaAI ? '✨ ' : ''}${parts.join(', ')} einsortiert`, () => {
+    const ids = new Set(created.map(i => i.id)); state.items = state.items.filter(i => !ids.has(i.id)); save(); render();
+  });
+}
+$('#sortBtn').onclick = sortDump;
+
+/* Sprache */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (!SR) $('#micBtn').style.display = 'none';
+let rec = null;
+$('#micBtn').onclick = () => {
+  if (rec) { rec.stop(); return; }
+  rec = new SR(); rec.lang = 'de-DE'; rec.continuous = true; rec.interimResults = false;
+  const base = $('#dump').value;
+  let said = '';
+  rec.onresult = ev => { for (let i = ev.resultIndex; i < ev.results.length; i++) if (ev.results[i].isFinal) said += ev.results[i][0].transcript.trim() + '. ';
+                         $('#dump').value = (base ? base + '\n' : '') + said; };
+  rec.onend = () => { $('#micBtn').classList.remove('rec'); rec = null; };
+  rec.onerror = () => toast('Mikrofon nicht verfügbar');
+  rec.start(); $('#micBtn').classList.add('rec');
+};
+
+/* Einkauf */
+$('#shopAdd').onsubmit = e => {
+  e.preventDefault(); const v = $('#shopInput').value.trim(); if (!v) return;
+  addItems(v.split(/,|\bund\b/).map(tidy).filter(Boolean).map(t => ({ type:'shopping', title: cap(t) })));
+  $('#shopInput').value = '';
+};
+$('#clearShop').onclick = () => { state.items = state.items.filter(i => !(i.type === 'shopping' && i.done)); save(); render(); };
+const shopText = () => '🛒 Einkaufsliste\n' + state.items.filter(i => i.type === 'shopping' && !i.done).map(i => '• ' + i.title).join('\n');
+$('#shareShop').onclick = async () => {
+  try { if (navigator.share) await navigator.share({ text: shopText() }); else { await navigator.clipboard.writeText(shopText()); toast('Liste kopiert'); } } catch {}
+};
+$('#orderShop').onclick = () => toast('Bald: Liste mit einem Tipp an REWE, Picnic & Co. übergeben');
+
+/* Rückblick */
+$('#allTomorrow').onclick = () => {
+  const t = todayISO(), tm = iso(addDays(new Date(), 1)); let n = 0;
+  for (const i of state.items) if ((i.type === 'task' || i.type === 'event') && !i.done && i.date && i.date <= t) { i.date = tm; n++; }
+  save(); render(); toast(n ? `${n} Einträge auf morgen verschoben. Gute Nacht! 🌙` : 'Nichts zu verschieben');
+};
+
+/* Einstellungen */
+$('#saveKey').onclick = () => {
+  store.set('kopffrei.key', $('#apiKey').value.trim()); store.set('kopffrei.model', $('#model').value.trim());
+  render(); toast('Gespeichert'); showView('heute');
+};
+$('#removeKey').onclick = () => { store.del('kopffrei.key'); $('#apiKey').value = ''; render(); toast('Schlüssel entfernt'); };
+$('#exportBtn').onclick = () => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' }));
+  a.download = `kopf-frei-${todayISO()}.json`; a.click();
+};
+$('#importBtn').onclick = () => $('#importFile').click();
+$('#importFile').onchange = async e => {
+  try { const d = JSON.parse(await e.target.files[0].text()); if (Array.isArray(d.items)) { state = { doneLog: {}, ...d }; save(); render(); toast('Importiert'); } }
+  catch { toast('Datei konnte nicht gelesen werden'); }
+};
+$('#wipeBtn').onclick = () => { if (confirm('Wirklich alle Einträge löschen?')) { state = { items: [], doneLog: {} }; save(); render(); showView('heute'); } };
+$('#demoBtn').onclick = () => {
+  addItems(localParse('Heute 18:30 Yoga. Morgen um 9 Uhr Zahnarzt. Steuererklärung abschicken, wichtig! Mama anrufen. Milch, Eier, Tomaten und Klopapier kaufen. Am Freitag Geschenk für Lisa besorgen. Idee: Wochenendtrip an die Ostsee'));
+  showView('heute');
+};
+
+/* Erster Start: kurze Anleitung über Platzhalter + Service Worker */
+render();
+setInterval(render, 60_000);
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+// Für Tests
+window.__kopffrei = { localParse, parseDate };
+</script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "name": "Kopf frei",
+  "short_name": "Kopf frei",
+  "description": "Alles aus dem Kopf rein – Kopf frei sortiert es in Termine, Aufgaben und Einkaufsliste.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f6fb",
+  "theme_color": "#4f46e5",
+  "lang": "de",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
